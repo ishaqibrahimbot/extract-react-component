@@ -23,7 +23,7 @@ for (const JSXElement of sourceFile.getDescendantsOfKind(
         SyntaxKind.StringLiteral
       )) {
         console.log(value.getText());
-        value.setLiteralValue("new-style");
+        value.setLiteralValue("old-style");
       }
     }
   });
