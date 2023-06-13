@@ -1,4 +1,6 @@
-# End goal
+## This is a work in progress
+
+## End goal
 
 Build a codemod that can easily extract a bunch of JSX from any file and refactor it into a separate component. It should be able to detect any props the component would need and copy over those as well.
 
