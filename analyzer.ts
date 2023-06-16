@@ -1,32 +1,64 @@
-import { Project, SyntaxKind } from "ts-morph";
+import ts, { Project, SyntaxKind } from "ts-morph";
 
 const project = new Project({
   tsConfigFilePath: "tsconfig.json",
   skipAddingFilesFromTsConfig: true,
 });
 
-project.addSourceFileAtPath("Component.tsx");
-
-const sourceFile = project.getSourceFile("Component.tsx");
+const sourceFile = project.addSourceFileAtPath("Component.tsx");
 
 for (const JSXElement of sourceFile.getDescendantsOfKind(
   SyntaxKind.JsxElement
 )) {
-  JSXElement.forEachDescendant((descendant, traversal) => {
-    if (descendant.getKind() == SyntaxKind.JsxAttribute) {
-      for (const identifier of descendant.getDescendantsOfKind(
-        SyntaxKind.Identifier
-      )) {
-        console.log(identifier.getText());
+  const structure = JSXElement.getStructure();
+
+  if (structure.name == "div") {
+    const newSourceFile = project.createSourceFile("NewComponent.tsx", "", {
+      overwrite: true,
+    });
+
+    newSourceFile.addImportDeclaration({
+      defaultImport: "React",
+      moduleSpecifier: "react",
+    });
+
+    const props = [];
+
+    JSXElement.forEachDescendant((node) => {
+      if (node.getKind() == SyntaxKind.JsxExpression) {
+        const expression = node.getFullText().replace("{", "").replace("}", "");
+        props.push(expression);
       }
-      for (const value of descendant.getDescendantsOfKind(
-        SyntaxKind.StringLiteral
-      )) {
-        console.log(value.getText());
-        value.setLiteralValue("old-style");
-      }
-    }
-  });
+    });
+
+    newSourceFile.addVariableStatement({
+      declarationKind: ts.VariableDeclarationKind.Const,
+      isExported: true,
+      declarations: [
+        {
+          name: "NewComponent",
+          initializer: (writer) => {
+            writer.writeLine(`({${props.join(", ")}}) => {`);
+            writer.writeLine("return (");
+            writer.write(JSXElement.getText());
+            writer.writeLine(");");
+            writer.writeLine("};");
+          },
+        },
+      ],
+    });
+
+    JSXElement.replaceWithText((writer) => {
+      writer.write(
+        `<NewComponent ${props.map((prop) => `${prop}={${prop}}`).join(" ")} />`
+      );
+    });
+
+    sourceFile.addImportDeclaration({
+      moduleSpecifier: "./NewComponent",
+      namedImports: ["NewComponent"],
+    });
+  }
 }
 
 project.save();
