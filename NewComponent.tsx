@@ -1,5 +1,9 @@
 import React from "react";
 
-export const NewComponent = ({ name }) => {
-  return <div className="old-style">Hello {name}</div>;
+export const NewComponent = ({ greeting, name }) => {
+  return (
+    <div className="old-style">
+      {greeting} {name}
+    </div>
+  );
 };

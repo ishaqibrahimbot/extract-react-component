@@ -1,15 +1,21 @@
 import ts, { Project, SyntaxKind } from "ts-morph";
 
-const project = new Project({
-  tsConfigFilePath: "tsconfig.json",
-  skipAddingFilesFromTsConfig: true,
-});
+function main() {
+  const project = new Project({
+    tsConfigFilePath: "tsconfig.json",
+    skipAddingFilesFromTsConfig: true,
+  });
 
-const sourceFile = project.addSourceFileAtPath("Component.tsx");
+  const sourceFile = project.addSourceFileAtPath("Component.tsx");
 
-for (const JSXElement of sourceFile.getDescendantsOfKind(
-  SyntaxKind.JsxElement
-)) {
+  const descendant = sourceFile.getDescendantAtPos(230);
+
+  const ancestor = descendant.getFirstAncestorByKind(SyntaxKind.JsxElement);
+
+  if (!ancestor) return;
+
+  const JSXElement = ancestor as ts.JsxElement;
+
   const structure = JSXElement.getStructure();
 
   if (structure.name == "div") {
@@ -22,12 +28,50 @@ for (const JSXElement of sourceFile.getDescendantsOfKind(
       moduleSpecifier: "react",
     });
 
-    const props = [];
+    const props: {
+      name: string;
+      value: string;
+    }[] = [];
 
     JSXElement.forEachDescendant((node) => {
       if (node.getKind() == SyntaxKind.JsxExpression) {
-        const expression = node.getFullText().replace("{", "").replace("}", "");
-        props.push(expression);
+        node.forEachChild((child) => {
+          switch (child.getKind()) {
+            case SyntaxKind.Identifier: {
+              const declarationName = child
+                .getSymbol()
+                .getValueDeclaration()
+                .getKind();
+
+              if (declarationName == SyntaxKind.VariableDeclaration) {
+                props.push({
+                  name: child.getText(),
+                  value: child.getText(),
+                });
+              }
+              return;
+            }
+
+            case SyntaxKind.PropertyAccessExpression: {
+              // console.log(child.getText());
+              // console.log(child.getSymbol().getName())
+              props.push({
+                name: child.getSymbol().getName(),
+                value: child.getText(),
+              });
+              return;
+            }
+
+            case SyntaxKind.CallExpression: {
+              console.log(child.getText());
+              return;
+            }
+
+            default: {
+              return;
+            }
+          }
+        });
       }
     });
 
@@ -38,9 +82,16 @@ for (const JSXElement of sourceFile.getDescendantsOfKind(
         {
           name: "NewComponent",
           initializer: (writer) => {
-            writer.writeLine(`({${props.join(", ")}}) => {`);
+            writer.writeLine(
+              `({${props.map((prop) => prop.name).join(", ")}}) => {`
+            );
             writer.writeLine("return (");
-            writer.write(JSXElement.getText());
+            let JSX = JSXElement.getText();
+
+            props.forEach((prop) => {
+              JSX = JSX.replace(prop.value, prop.name);
+            });
+            writer.write(JSX);
             writer.writeLine(");");
             writer.writeLine("};");
           },
@@ -50,7 +101,9 @@ for (const JSXElement of sourceFile.getDescendantsOfKind(
 
     JSXElement.replaceWithText((writer) => {
       writer.write(
-        `<NewComponent ${props.map((prop) => `${prop}={${prop}}`).join(" ")} />`
+        `<NewComponent ${props
+          .map((prop) => `${prop.name}={${prop.value}}`)
+          .join(" ")} />`
       );
     });
 
@@ -59,6 +112,8 @@ for (const JSXElement of sourceFile.getDescendantsOfKind(
       namedImports: ["NewComponent"],
     });
   }
+
+  project.save();
 }
 
-project.save();
+main();
