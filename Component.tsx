@@ -3,6 +3,10 @@ import { toUpperCase } from "./utils";
 
 // const name = "Ishaq";
 
+function helloWorld() {
+  console.log("HELLO WORLD");
+}
+
 const greeting = "Hello";
 
 const data = {
@@ -13,7 +17,7 @@ const data = {
 
 // const words = ["What's", "up"];
 
-export const Component = ({ prop }) => {
+export const Component = ({ prop, somethingElse, yetAnotherThing }) => {
   return (
     <section>
       <div className="old-style">

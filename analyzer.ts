@@ -1,4 +1,5 @@
 import {
+  ArrowFunction,
   CallExpression,
   Identifier,
   JsxExpression,
@@ -27,7 +28,82 @@ function main() {
 
   const sourceFile = project.addSourceFileAtPath("Component.tsx");
 
-  const descendant = sourceFile.getDescendantAtPos(284);
+  const importDeclarations = sourceFile.getImportDeclarations();
+  const variableDeclarations = sourceFile.getVariableDeclarations();
+  const functions = sourceFile.getFunctions();
+
+  const defaultImports = {};
+  const namedImports = {};
+
+  importDeclarations.forEach((importDecl) => {
+    const structure = importDecl.getStructure();
+    if (structure?.defaultImport) {
+      defaultImports[structure.defaultImport] = structure.moduleSpecifier;
+    }
+    if (
+      Array.isArray(structure.namedImports) &&
+      structure?.namedImports?.length > 0
+    ) {
+      console.log(structure.namedImports);
+      structure.namedImports?.forEach((namedImport) => {
+        namedImports[namedImport?.name] = structure.moduleSpecifier;
+      });
+    }
+  });
+
+  console.log(defaultImports);
+  console.log(namedImports);
+
+  const defaultImportKeys = Object.keys(defaultImports);
+  const namedImportKeys = Object.keys(namedImports);
+
+  const inputProps = [];
+
+  const varDeclarations = [];
+  const fileName = sourceFile.getBaseNameWithoutExtension();
+  variableDeclarations.forEach((varDecl) => {
+    if (varDecl.getName() !== fileName) varDeclarations.push(varDecl.getName());
+    else {
+      const initializer = varDecl.getInitializer();
+      if (initializer.getKind() == SyntaxKind.ArrowFunction) {
+        const arrowFunction = initializer as ArrowFunction;
+        const params = arrowFunction.getParameters();
+        params.forEach((param) =>
+          param.forEachDescendant((desc) => {
+            if (desc.getKind() == SyntaxKind.BindingElement) {
+              inputProps.push(desc.getText());
+            }
+          })
+        );
+      }
+    }
+  });
+
+  const functionDecs = [];
+
+  console.log(varDeclarations);
+
+  functions.forEach((func) => {
+    if (func.getName() !== fileName) {
+      functionDecs.push(func.getName());
+    } else {
+      // we've got the component
+      const params = func.getParameters();
+      params.forEach((param) =>
+        param.forEachDescendant((desc) => {
+          if (desc.getKind() == SyntaxKind.BindingElement) {
+            inputProps.push(desc.getText());
+          }
+        })
+      );
+    }
+  });
+
+  inputProps;
+
+  functionDecs;
+
+  const descendant = sourceFile.getDescendantAtPos(341);
 
   const ancestor = descendant.getFirstAncestorByKind(SyntaxKind.JsxElement);
 
@@ -61,8 +137,12 @@ function main() {
           case SyntaxKind.Identifier: {
             let isNodeInside = true;
             let childNode = child as Identifier;
-            childNode.getDefinitionNodes().forEach((def) => {
-              if (!isInside(def)) {
+            // console.log(child.getText())
+            childNode.getDefinitions().forEach((def) => {
+              // if(childNode.getText() == "toUpperCase") {
+              console.log(def.getSourceFile().getFilePath());
+              // }
+              if (!isInside(def.getNode())) {
                 isNodeInside = false;
               }
             });
@@ -120,16 +200,31 @@ function main() {
                 value: child.getText(),
               });
             }
-            traversal.stop();
+            traversal.skip();
             return;
           }
 
-          case SyntaxKind.CallExpression: {
-            let childNode = node as CallExpression;
-            // childNode.
-            console.log(child.getText());
-            return;
-          }
+          // case SyntaxKind.CallExpression: {
+          //   let childNode = node as CallExpression;
+          //   childNode.forEachDescendant(desc => {
+          //     console.log(desc.getKindName())
+          //     // console.log(callChild.getText())
+          //     // let cChild = callChild as CallExpression
+          //     // cChild.getArguments().forEach(arg => {
+          //     //   console.log(arg.getText())
+          //     // })
+          //     // console.log(cChild.getExpression().getText())
+          //     // const expression = cChild.getExpression()
+
+          //     // console.log(JSXElement.containsRange(expression.getStart(), expression.getEnd()))
+          //   })
+          //   // console.log(childNode)
+          //   // childNode.
+          //   // console.log(childNode.getArguments().map(arg => arg))
+          //   console.log(child.getText());
+          //   traversal.skip();
+          //   return;
+          // }
 
           default: {
             return;
@@ -178,7 +273,7 @@ function main() {
     namedImports: ["NewComponent"],
   });
 
-  project.save();
+  // project.save();
 }
 
 main();
