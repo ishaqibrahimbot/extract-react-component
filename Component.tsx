@@ -15,13 +15,14 @@ const data = {
   },
 };
 
-// const words = ["What's", "up"];
+const words = ["What's", "up"];
 
 export const Component = ({ prop, somethingElse, yetAnotherThing }) => {
   return (
     <section>
       <div className="old-style">
-        {greeting} {data?.user?.name} {toUpperCase(prop)}
+        {greeting} {data?.user?.name} {toUpperCase(prop)}{" "}
+        {words.map((word) => word.toUpperCase()).join(" ")}
       </div>
       ;<p>Some text over here</p>
     </section>

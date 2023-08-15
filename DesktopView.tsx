@@ -6,7 +6,6 @@ import LoadingDots from "@components/loading-dots/LoadingDots";
 import Error from "@components/common/Error/Error";
 import { processAndDownloadCsvData } from "../..";
 import { ORDER_TRACKING_URL } from "@utils/aws-services";
-import { NewComponent } from "./NewComponent";
 
 const DesktopView: React.FC<ViewProps> = ({
   className,
@@ -20,7 +19,15 @@ const DesktopView: React.FC<ViewProps> = ({
 }) => {
   return (
     <div className={`${css.container} ${className}`}>
-      <NewComponent title={title} />
+      <div className={"flex items-center bg-accents-0 px-6 py-5 w-full"}>
+        <p
+          className={
+            "font-quasimoda font-semibold text-xl tracking-h2 leading-5 text-primary"
+          }
+        >
+          {title || " My Orders"}
+        </p>
+      </div>
       <div>
         <table className={css.table}>
           <tr>

@@ -46,6 +46,7 @@ function main() {
     ) {
       console.log(structure.namedImports);
       structure.namedImports?.forEach((namedImport) => {
+        //@ts-ignore
         namedImports[namedImport?.name] = structure.moduleSpecifier;
       });
     }
@@ -103,7 +104,7 @@ function main() {
 
   functionDecs;
 
-  const descendant = sourceFile.getDescendantAtPos(341);
+  const descendant = sourceFile.getDescendantAtPos(381);
 
   const ancestor = descendant.getFirstAncestorByKind(SyntaxKind.JsxElement);
 
@@ -122,12 +123,14 @@ function main() {
     moduleSpecifier: "react",
   });
 
-  const props: {
+  let props: {
     name: string;
     value: string;
   }[] = [];
 
   const isInside = getInsideChecker(JSXElement.getStart(), JSXElement.getEnd());
+
+  const visitedIdentifiers = [];
 
   JSXElement.forEachDescendant((node) => {
     if (node.getKind() == SyntaxKind.JsxExpression) {
@@ -165,11 +168,57 @@ function main() {
             // ];
 
             if (!isNodeInside) {
-              props.push({
-                name: child.getText(),
-                value: child.getText(),
-              });
-              console.log(props);
+              // now we gotta do some work
+
+              const isDefaultImport = defaultImportKeys.includes(
+                child.getText()
+              );
+              const isNamedImport = namedImportKeys.includes(child.getText());
+              const isVarDeclaration = varDeclarations.includes(
+                child.getText()
+              );
+              const isFunction = functionDecs.includes(child.getText());
+
+              if (visitedIdentifiers.includes(child.getText())) {
+                return;
+              }
+
+              if (isDefaultImport) {
+                newSourceFile.addImportDeclaration({
+                  defaultImport: child.getText(),
+                  moduleSpecifier: defaultImports[child.getText()],
+                });
+
+                visitedIdentifiers.push(child.getText());
+
+                return;
+              }
+
+              if (isNamedImport) {
+                newSourceFile.addImportDeclaration({
+                  namedImports: [child.getText()],
+                  moduleSpecifier: namedImports[child.getText()],
+                });
+
+                visitedIdentifiers.push(child.getText());
+
+                return;
+              }
+
+              if (isVarDeclaration || inputProps.includes(child.getText())) {
+                props.push({
+                  name: child.getText(),
+                  value: child.getText(),
+                });
+
+                visitedIdentifiers.push(child.getText());
+
+                return;
+              }
+
+              // TODO: handle isFunction
+
+              // console.log(props);
             }
             return;
           }
@@ -186,7 +235,8 @@ function main() {
                 }
               });
             let isNodeInside = true;
-            startingIdentifierNode.getDefinitionNodes().forEach((def) => {
+
+            startingIdentifierNode?.getDefinitionNodes()?.forEach((def) => {
               console.log(def.getText());
               console.log(isInside(def));
               if (!isInside(def)) {
@@ -195,10 +245,11 @@ function main() {
             });
 
             if (!isNodeInside) {
-              props.push({
-                name: child.getSymbol().getName(),
+              const prop = {
+                name: child.getLastChild().getText(),
                 value: child.getText(),
-              });
+              };
+              props.push(prop);
             }
             traversal.skip();
             return;
@@ -236,6 +287,15 @@ function main() {
 
   console.log(props);
 
+  const dedupedProps = [];
+  const uniquePropNames = [];
+  props.forEach((prop) => {
+    if (!uniquePropNames.includes(prop.name)) {
+      dedupedProps.push(prop);
+      uniquePropNames.push(prop.name);
+    }
+  });
+
   newSourceFile.addVariableStatement({
     declarationKind: VariableDeclarationKind.Const,
     isExported: true,
@@ -244,13 +304,13 @@ function main() {
         name: "NewComponent",
         initializer: (writer) => {
           writer.writeLine(
-            `({${props.map((prop) => prop.name).join(", ")}}) => {`
+            `({${dedupedProps.map((prop) => prop.name).join(", ")}}) => {`
           );
           writer.writeLine("return (");
           let JSX = JSXElement.getText();
 
           props.forEach((prop) => {
-            JSX = JSX.replace(prop.value, prop.name);
+            JSX = JSX.replaceAll(prop.value, prop.name);
           });
           writer.write(JSX);
           writer.writeLine(");");
@@ -262,7 +322,7 @@ function main() {
 
   JSXElement.replaceWithText((writer) => {
     writer.write(
-      `<NewComponent ${props
+      `<NewComponent ${dedupedProps
         .map((prop) => `${prop.name}={${prop.value}}`)
         .join(" ")} />`
     );
@@ -273,7 +333,9 @@ function main() {
     namedImports: ["NewComponent"],
   });
 
-  // project.save();
+  newSourceFile.formatText();
+
+  project.save();
 }
 
 main();
