@@ -4,8 +4,8 @@ import {
   Identifier,
   JsxExpression,
   Node,
-  Project,
   PropertyAccessExpression,
+  SourceFile,
   SyntaxKind,
   VariableDeclarationKind,
   ts,
@@ -20,14 +20,11 @@ function getInsideChecker(start, end) {
   };
 }
 
-function main() {
-  const project = new Project({
-    tsConfigFilePath: "tsconfig.json",
-    skipAddingFilesFromTsConfig: true,
-  });
-
-  const sourceFile = project.addSourceFileAtPath("Component.tsx");
-
+export function extractComponent(
+  sourceFile: SourceFile,
+  newSourceFile: SourceFile,
+  offset: number
+) {
   const importDeclarations = sourceFile.getImportDeclarations();
   const variableDeclarations = sourceFile.getVariableDeclarations();
   const functions = sourceFile.getFunctions();
@@ -44,7 +41,6 @@ function main() {
       Array.isArray(structure.namedImports) &&
       structure?.namedImports?.length > 0
     ) {
-      console.log(structure.namedImports);
       structure.namedImports?.forEach((namedImport) => {
         //@ts-ignore
         namedImports[namedImport?.name] = structure.moduleSpecifier;
@@ -52,8 +48,8 @@ function main() {
     }
   });
 
-  console.log(defaultImports);
-  console.log(namedImports);
+  console.log("DEFAULT IMPORTS: ", defaultImports);
+  console.log("NAMED IMPORTS: ", namedImports);
 
   const defaultImportKeys = Object.keys(defaultImports);
   const namedImportKeys = Object.keys(namedImports);
@@ -82,7 +78,7 @@ function main() {
 
   const functionDecs = [];
 
-  console.log(varDeclarations);
+  console.log("VARIABLE DECLARATIONS: ", varDeclarations);
 
   functions.forEach((func) => {
     if (func.getName() !== fileName) {
@@ -104,19 +100,23 @@ function main() {
 
   functionDecs;
 
-  const descendant = sourceFile.getDescendantAtPos(381);
+  const descendant = sourceFile.getDescendantAtPos(offset);
+
+  console.log("FOUND DESCENDANT: ", descendant.getText());
 
   const ancestor = descendant.getFirstAncestorByKind(SyntaxKind.JsxElement);
+
+  descendant.getAncestors().forEach((ancestor, idx) => {
+    console.log(`ANCESTOR ${idx}: `, ancestor.getKindName());
+  });
+
+  console.log("ANCESTOR: ", ancestor.getText());
 
   if (!ancestor) return;
 
   const JSXElement = ancestor;
 
   const structure = JSXElement.getStructure();
-
-  const newSourceFile = project.createSourceFile("NewComponent.tsx", "", {
-    overwrite: true,
-  });
 
   newSourceFile.addImportDeclaration({
     defaultImport: "React",
@@ -314,7 +314,7 @@ function main() {
           });
           writer.write(JSX);
           writer.writeLine(");");
-          writer.writeLine("};");
+          writer.writeLine("}");
         },
       },
     ],
@@ -334,8 +334,4 @@ function main() {
   });
 
   newSourceFile.formatText();
-
-  project.save();
 }
-
-main();

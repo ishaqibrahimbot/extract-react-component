@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": "./src",
     "jsx": "react",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
@@ -7,7 +8,11 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "sourceMap": true,
-    "target": "esnext"
+    "target": "esnext",
+    "paths": {
+      "@utils": ["./utils"]
+    }
   },
+  "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"]
 }
