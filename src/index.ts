@@ -12,7 +12,7 @@ const newSourceFile = project.createSourceFile("src/NewComponent.tsx", "", {
   overwrite: true,
 });
 
-const offset = 381;
+const offset = 256;
 
 extractComponent(sourceFile, newSourceFile, offset);
 

@@ -1,3 +1,5 @@
+### Just some brainstorming
+
 So what is the testing strategy?
 
 On a very high level, we want to be able to take an input -> run the codemod on it -> and then
@@ -8,7 +10,7 @@ What is the expected output in our case? Two things:
 - The original components file has a NewComponent instead of the original component
 - The new component file is exactly like we would expect
 
-Now how to make this run. We create a function named runTest which takes the
+Now how to make this run? We create a function named runTest which takes the
 source file, the codemod, and the expected output.
 
 Inside the function, we're going to set up a new project, then run the codemod on the source

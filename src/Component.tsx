@@ -1,12 +1,6 @@
 import React from "react";
 import { toUpperCase } from "@utils";
 
-// const name = "Ishaq";
-
-function helloWorld() {
-  console.log("HELLO WORLD");
-}
-
 const greeting = "Hello";
 
 const data = {
@@ -15,13 +9,11 @@ const data = {
   },
 };
 
-const words = ["What's", "up"];
-
-export const Component = ({ prop, somethingElse, yetAnotherThing }) => {
+export const Component = ({ prop, someOtherProp, yetAnotherProp }) => {
   return (
     <section>
       <div className="old-style">
-        {greeting} {data?.user?.name} {toUpperCase(prop)}{" "}
+        {greeting} {data?.user?.name} {toUpperCase(prop)}
       </div>
       ;<p>Some text over here</p>
     </section>
